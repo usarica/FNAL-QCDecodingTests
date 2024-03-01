@@ -16,7 +16,8 @@ so unless we have to do fancy stuff, we can keep just showing the figure.
 
 
 def plot_jupyter_figure(fig):
-  fig.show()
+  pass
+  #fig.show()
   ##fig.savefig('temp.pdf')
   ##convert_from_path('temp.pdf', 1, size=(1600, None))[0].save('temp.png','PNG')
   #fig.savefig('temp.png')
