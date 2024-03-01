@@ -22,3 +22,14 @@ def get_builtin_circuit(builtin_name, distance, rounds, **noise_args):
     **noise_args
   )
 
+
+def get_custom_circuit(circuit):
+  """
+  Wrapper to simply pick an external circuit.
+  - Arguments:
+    circuit: A stim.Circuit object.
+  - Return type:
+    stim.Circuit
+  """
+  return circuit
+

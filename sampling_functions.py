@@ -2,10 +2,6 @@
 These are master functions to collect the MC samples using sinter.
 """
 
-
-import matplotlib
-matplotlib.use('pgf')
-
 from matplotlib import pyplot as plt
 
 import sinter # MC sampling
@@ -135,23 +131,6 @@ def plot_error_rate_sinter(
       group_labels = {'pymatching': "pyMatching"}
     )
   """
-  plt.rcParams.update(
-    {
-      "font.family": "serif",
-      "text.usetex": True,
-      "pgf.rcfonts": False,
-      "pgf.texsystem": 'pdflatex', # default is xetex
-      "pgf.preamble": "\n".join(
-        [
-          "\\usepackage[T1]{fontenc}",
-          "\\usepackage{mathpazo}",
-          "\\usepackage{amsmath}",
-          "\\usepackage{amssymb}"
-        ]
-      )
-    }
-  )
-
   fcn_x = lambda st, tt=x_title: get_variable_from_sample_sinter(st, tt)
   fcn_group = lambda st, tt=group_title, lbl=group_labels: get_variable_from_sample_sinter(st, tt, lbl) if group_title is not None else None
   sinter.plot_error_rate(
