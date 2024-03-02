@@ -40,7 +40,7 @@ def generate_samples_sinter(num_workers, tasks, num_samples, decoders, **sinter_
     num_samples: Number of samples to use.
     sinter_collect_args: Extra arguments to sinter.collect.
   - Return type:
-    sinter.CollectResult
+    List[sinter.TaskStats]t
   - Example call:
     generate_samples_sinter(
       num_workers = 4,
