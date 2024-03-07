@@ -15,7 +15,8 @@ import numpy as np
 def build_sequential_dense_model(
     n_features, output_n_pred,
     dense_layers,
-    loss_fcn = "binary_crossentropy"
+    loss_fcn = "binary_crossentropy",
+    output_activation = "sigmoid"
   ):
   """
   Build a sequential model with dense layers.
@@ -24,6 +25,7 @@ def build_sequential_dense_model(
     output_n_pred: Number of output predictions
     dense_layers: List of the number of neurons in each dense layer
     loss_fcn: Loss function to use, defaulted to 'binary_crossentropy'
+    output_activation: Activation function for the output layer, defaulted to 'sigmoid'
   - Return type:
     Sequential model
   """
@@ -31,7 +33,7 @@ def build_sequential_dense_model(
 
   for n in dense_layers:
     nnlayers.append(Dense(n, activation='relu'))
-  nnlayers.append(Dense(output_n_pred, activation='sigmoid'))
+  nnlayers.append(Dense(output_n_pred, activation=output_activation))
 
   model = Sequential(nnlayers)
   model.summary()
@@ -43,7 +45,8 @@ def build_sequential_dense_model(
 def build_sequential_qdense_model(
     n_features, output_n_pred,
     dense_layers,
-    loss_fcn = "binary_crossentropy"
+    loss_fcn = "binary_crossentropy",
+    output_activation = "quantized_sigmoid(4)"
   ):
   """
   Build a sequential model with QDense layers.
@@ -52,13 +55,15 @@ def build_sequential_qdense_model(
     output_n_pred: Number of output predictions
     dense_layers: List of tuples of the number of neurons in each dense layer and the number of bits for the activation function
     loss_fcn: Loss function to use, defaulted to 'binary_crossentropy'
+    output_activation: Activation function for the output layer, defaulted to 'quantized_sigmoid(4)'
   - Return type:
     Sequential model
   """
   nnlayers = [ Input(shape=(n_features,)) ]
+
   for n, b in dense_layers:
     nnlayers.append(QDense(n, activation=f'quantized_relu({b})'))
-  nnlayers.append(QDense(output_n_pred, activation='quantized_sigmoid(4)'))
+  nnlayers.append(QDense(output_n_pred, activation=output_activation))
 
   model = Sequential(nnlayers)
   model.summary()
