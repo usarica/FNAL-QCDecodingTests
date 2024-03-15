@@ -175,3 +175,15 @@ tornado>=6.2
 traitlets>=5.4.0
 
 wcwidth
+
+jupyter==1.0.0
+
+PyMatching==2.2.0
+
+sinter==1.12.1
+
+stim==1.12.1
+
+hls4ml==0.8.1
+
+cirq==1.3.0
