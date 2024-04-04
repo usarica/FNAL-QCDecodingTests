@@ -7,7 +7,9 @@ from tensorflow.keras.layers import Bidirectional
 from tensorflow.keras.layers import SimpleRNN
 from tensorflow.keras.layers import Embedding
 from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import concatenate
 from qkeras import QDense, QActivation
+from keras.models import Model
 from sklearn.model_selection import train_test_split
 import numpy as np
 
@@ -117,20 +119,17 @@ def predict_model(model, features, labels):
   return prediction
 
 
-def split_data(features, labels, test_size=0.2, seed=12345, shuffle=False):
+def split_data(*arrays, test_size=0.2, seed=12345, shuffle=False):
   """
   Split the data into training and testing sets.
   - Arguments:
-    features: Features
-    labels: Labels
+    features: Features and labels
     test_size: Fraction of the data to use for testing
     seed: Random seed
     shuffle: Shuffle the data
   - Return type:
-    Tuple of features_train, features_test, labels_train, labels_test
+    Tuple of features_train, features_test, etc.
   """
-  features_train, features_test, labels_train, labels_test = \
-  train_test_split(features, labels, test_size=test_size, random_state=seed, shuffle = shuffle)
-  return features_train, features_test, labels_train, labels_test
+  return train_test_split(*arrays, test_size=test_size, random_state=seed, shuffle=shuffle)
 
 
