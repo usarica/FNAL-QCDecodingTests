@@ -97,7 +97,7 @@ def shift_frame(data_qubits_kxk, measure_qubits_kxk, k, d, shift_x, shift_y):
 
 def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None, binary_t=np.int8, idx_t=np.int8):
   """
-  group_det_bits_kxk: Group the (d^2-1) detector bits into groups of size (k^2-1) for a kxk subset of the dxd surfsce code.
+  group_det_bits_kxk: Group the (d^2-1) detector bits into groups of size (k^2-1) for a kxk subset of the dxd surface code.
   Arguments:
   - det_bits_dxd: The measure bits for the dxd surface code as ordered by stim
   - d: The distance of the surface code
@@ -113,8 +113,9 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
     that would be used in each kernel with each 2D [,:,:] subset ordered in a way consistent with stim
   - A 3D array of shape=[(d-k+1)^2, number of samples, k^2] for the data bits
   - A 3D array of shape=[(d-k+1)^2, number of samples, k] for the logical observables of each kernel
-  - A 3D array of shape=[(d-k+1)^2, number of samples, r] for the partial translation map
-    of the kernel flip predictions to the original logical observable in the dxd surface code
+  - A 3D array of shape=[(d-k+1), number of samples, r] for the partial translation map
+    of the kernel flip predictions to the original logical observable in the dxd surface code.
+    In this translation map, the first dimension corresponds to the row (column) of an equivalent ZL (XL) observable.
   """
   # Number of kernels along each dimension
   n_shifts = d-k+1
@@ -122,7 +123,7 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
   det_bits_kxk_all = []
   data_bits_kxk_all = []
   obs_bits_kxk_all = []
-  kernel_result_translation_map = np.zeros(shape=(n_shifts**2, det_bits_dxd.shape[0], r), dtype=binary_t)
+  kernel_result_translation_map = np.zeros(shape=(n_shifts, det_bits_dxd.shape[0], r), dtype=binary_t)
 
   # Measure qubits
   measure_qubits_ord_dxd = get_measure_qubits_ord(d)
@@ -144,26 +145,26 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
 
   for shift_y in range(n_shifts):
     for shift_x in range(n_shifts):
-      idx_kernel = shift_x + shift_y*n_shifts
       # Get the filtering indices to translate kxk kernel results to the dxd ZL or XL boundaries
-      parity_x, parity_y, flip_x, flip_y = get_kernel_parity_flips(n_shifts, shift_x, shift_y)
-      is_top = (parity_y!=-1 and not flip_y)
-      is_left = (parity_x!=-1 and not flip_x)
-      x_boundary = 1 + 2*shift_x + (0 if is_left else 2*k)
-      y_boundary = 1 + 2*shift_y + (0 if is_top else 2*k)
-      measure_boundary_filter = []
-      for m in range(n_measure_dxd):
-        if (use_rotated_z and measurement_sequence_measure_dxd[m][2][1]<y_boundary and measurement_sequence_measure_dxd[m][1]=='M:Z') \
-          or (not use_rotated_z and measurement_sequence_measure_dxd[m][2][0]<x_boundary and measurement_sequence_measure_dxd[m][1]=='M:X'):
-          measure_boundary_filter.append(m)
-      measure_boundary_filter.extend([ idx_m + rr*n_measure_dxd for idx_m in measure_boundary_filter for rr in range(1, r)])
-      measure_boundary_filter = np.array(measure_boundary_filter, dtype=idx_t)
-      measure_boundary_filter = measure_boundary_filter.reshape(r, len(measure_boundary_filter)//r)
-      for rr in range(r):
-        kernel_result_translation_map[idx_kernel, :, rr] = np.sum(det_bits_dxd[:, measure_boundary_filter[rr]], axis=1)
+      if (shift_y==0 and not use_rotated_z) or (shift_x==0 and use_rotated_z):
+        idx_kernel_row = (shift_y if use_rotated_z else shift_x)
+        parity_x, parity_y, flip_x, flip_y = get_kernel_parity_flips(n_shifts, shift_x, shift_y)
+        is_top = (parity_y!=-1 and not flip_y)
+        is_left = (parity_x!=-1 and not flip_x)
+        x_boundary = 1 + 2*shift_x + (0 if is_left else 2*k)
+        y_boundary = 1 + 2*shift_y + (0 if is_top else 2*k)
+        measure_boundary_filter = []
+        for m in range(n_measure_dxd):
+          if (use_rotated_z and measurement_sequence_measure_dxd[m][2][1]<y_boundary and measurement_sequence_measure_dxd[m][1]=='M:Z') \
+            or (not use_rotated_z and measurement_sequence_measure_dxd[m][2][0]<x_boundary and measurement_sequence_measure_dxd[m][1]=='M:X'):
+            measure_boundary_filter.append(m)
+        measure_boundary_filter.extend([ idx_m + rr*n_measure_dxd for idx_m in measure_boundary_filter for rr in range(1, r)])
+        measure_boundary_filter = np.array(measure_boundary_filter, dtype=idx_t)
+        measure_boundary_filter = measure_boundary_filter.reshape(r, len(measure_boundary_filter)//r)
+        for rr in range(r):
+          kernel_result_translation_map[idx_kernel_row, :, rr] = np.sum(det_bits_dxd[:, measure_boundary_filter[rr]], axis=1) % 2
 
       data_qubits_kxk, measure_qubits_kxk = shift_frame(data_qubits_ord_kxk, measure_qubits_ord_kxk, k, d, shift_x, shift_y)
-
       measurement_sequence_measure_qubits_kxk = sorted(measure_qubits_kxk)
       measurement_sequence_data_qubits_kxk = sorted(data_qubits_kxk)
 
@@ -207,5 +208,4 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
         # Reverse the order of the obs_bits filter to match stim conventions
         obs_bits_kxk_idx_filter = np.flip(obs_bits_kxk_idx_filter, axis=0)
         obs_bits_kxk_all.append(data_bits_dxd[:, obs_bits_kxk_idx_filter])
-  kernel_result_translation_map = kernel_result_translation_map % 2
   return np.array(det_bits_kxk_all, dtype=binary_t), np.array(data_bits_kxk_all, dtype=binary_t), np.array(obs_bits_kxk_all, dtype=binary_t), kernel_result_translation_map
