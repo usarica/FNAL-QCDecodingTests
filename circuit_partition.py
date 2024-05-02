@@ -109,7 +109,7 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
   - idx_t: The data type for the indices
   Returns:
   In order of appearance:
-  - A 3D array of shape=[(d-k+1)^2, number of samples, (k^2-1)] for the detector bits
+  - A 3D array of shape=[(d-k+1)^2, number of samples, r*(k^2-1)] for the detector bits
     that would be used in each kernel with each 2D [,:,:] subset ordered in a way consistent with stim
   - A 3D array of shape=[(d-k+1)^2, number of samples, k^2] for the data bits
   - A 3D array of shape=[(d-k+1)^2, number of samples, k] for the logical observables of each kernel
