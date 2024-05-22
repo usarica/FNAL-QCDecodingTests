@@ -209,3 +209,45 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
         obs_bits_kxk_idx_filter = np.flip(obs_bits_kxk_idx_filter, axis=0)
         obs_bits_kxk_all.append(data_bits_dxd[:, obs_bits_kxk_idx_filter])
   return np.array(det_bits_kxk_all, dtype=binary_t), np.array(data_bits_kxk_all, dtype=binary_t), np.array(obs_bits_kxk_all, dtype=binary_t), kernel_result_translation_map
+
+
+def decompose_state_from_bits(det_bits, r):
+  """
+  decompose_state_from_bits: Decompose the state of the surface code at each round from the detector bits.
+  
+  This function provides a ternary representation with state=-1 meaning no error, 0 meaning a possible error, and 1 meaning a certain error.
+  It collapses detector sequences of the form 010 or 101, so the two representations do not have 1-1 correspondence.
+  Moreover, it may give different states to detector sequence palindromes, e.g., 1000 -> 0,0,0 vs. 0001 -> -1,-1,0.
+  
+  Consider also the following detector bit sequence: 0111000.
+  - The corresponding state vector is 0,0,1,0,0.
+  - The corresponding detector event sequence is 100100.
+  If we were to naively interpret these sequences, we would think that there was a bit flip at the second and fifth rounds.
+  However, another interpretation is that the first bit flip happened in the first round, which is not captured directly from detection events.
+  The state vector in this case correctly describes the first state to be 0 (uncertain error assignment)
+  and predicts correctly a return to the same state at the end, just like how detection events would also predict.
+
+  Arguments:
+  - det_bits: Detector bits. Shape should be consistent with [number of samples, r, d^2-1]
+  - r: Number of rounds
+  Returns:
+  - 3D array of shape=[number of samples, r-2, d^2-1] for the state of the surface code at each round.
+  """
+  det_bits = det_bits.reshape(det_bits.shape[0], r, -1)
+  ns = det_bits.shape[0]
+  nt = r
+  ndet = det_bits.shape[2]
+  state_tracker = -np.ones(shape=(ns, ndet), dtype=np.int8)
+  delta_tracker = np.ones(shape=(ns, ndet), dtype=np.int8)
+  states = []
+  for t in range(nt-2):
+    input = det_bits[:,t:t+3,:]
+    data_err = input[:,0,:] + input[:,2,:] - input[:,0,:]*input[:,2,:]*2 # 001/011/110/100-like sequences
+    measure_err = input[:,1,:]*(1 - (input[:,0,:] + input[:,2,:])) + input[:,0,:]*input[:,2,:] # 010/101-like sequences
+
+    delta_tracker = delta_tracker*(1-measure_err*2)
+    state_tracker = np.maximum(np.minimum(state_tracker + delta_tracker*data_err, np.ones_like(state_tracker)), -np.ones_like(state_tracker))
+    delta_tracker = delta_tracker*(1-state_tracker*state_tracker*(1-measure_err)) - state_tracker*(1-measure_err)
+
+    states.append(deepcopy(state_tracker))
+  return np.array(states)
