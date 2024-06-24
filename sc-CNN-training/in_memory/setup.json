@@ -1,0 +1,27 @@
+{
+  "d": 5,
+  "r": 2,
+  "kernel_size": 3,
+  "p": 0.01,
+  "before_round_data_depolarization": 0.01,
+  "after_reset_flip_probability": 0.01,
+  "after_clifford_depolarization": 0.01,
+  "before_measure_flip_probability": 0.01,
+  "use_rotated_z": true,
+  "observable_type": "ZL",
+  "runname": "in_memory",
+  "n_totals": [
+    100000,
+    1000000,
+    10000000
+  ],
+  "frac_test": 0.2,
+  "batch_size": 1000,
+  "n_epochs": 60,
+  "n_nodes": 150,
+  "lrs": [
+    0.05,
+    0.005,
+    0.005
+  ]
+}
