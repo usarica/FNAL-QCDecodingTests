@@ -84,18 +84,22 @@ def get_unique_kernel_types(k, d):
 
 def shift_frame(data_qubits_kxk, measure_qubits_kxk, k, d, shift_x, shift_y):
   _, _, flip_x, flip_y = get_kernel_parity_flips(d-k+1, shift_x, shift_y)
-  res_data_qubits_kxk = deepcopy(data_qubits_kxk)
-  res_measure_qubits_kxk = deepcopy(measure_qubits_kxk)
-  for q in res_data_qubits_kxk:
-    q[2][0] = (q[2][0] if not flip_x else 2*k - q[2][0]) + 2*shift_x
-    q[2][1] = (q[2][1] if not flip_y else 2*k - q[2][1]) + 2*shift_y
-  for q in res_measure_qubits_kxk:
-    q[2][0] = (q[2][0] if not flip_x else 2*k - q[2][0]) + 2*shift_x
-    q[2][1] = (q[2][1] if not flip_y else 2*k - q[2][1]) + 2*shift_y
+  res_data_qubits_kxk = None
+  res_measure_qubits_kxk = None
+  if data_qubits_kxk is not None:
+    res_data_qubits_kxk = deepcopy(data_qubits_kxk)
+    for q in res_data_qubits_kxk:
+      q[2][0] = (q[2][0] if not flip_x else 2*k - q[2][0]) + 2*shift_x
+      q[2][1] = (q[2][1] if not flip_y else 2*k - q[2][1]) + 2*shift_y
+  if measure_qubits_kxk is not None:
+    res_measure_qubits_kxk = deepcopy(measure_qubits_kxk)
+    for q in res_measure_qubits_kxk:
+      q[2][0] = (q[2][0] if not flip_x else 2*k - q[2][0]) + 2*shift_x
+      q[2][1] = (q[2][1] if not flip_y else 2*k - q[2][1]) + 2*shift_y
   return res_data_qubits_kxk, res_measure_qubits_kxk
 
 
-def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None, binary_t=np.int8, idx_t=np.int8):
+def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None, binary_t=np.int8, idx_t=np.int32):
   """
   group_det_bits_kxk: Group the (d^2-1) detector bits into groups of size (k^2-1) for a kxk subset of the dxd surface code.
   Arguments:
@@ -211,9 +215,53 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
   return np.array(det_bits_kxk_all, dtype=binary_t), np.array(data_bits_kxk_all, dtype=binary_t), np.array(obs_bits_kxk_all, dtype=binary_t), kernel_result_translation_map
 
 
+def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts):
+  n_samples = det_bits_kxk_all.shape[1]
+  n_kernels = det_bits_kxk_all.shape[0]
+  n_shifts = int(np.sqrt(n_kernels))
+  d = n_shifts + k - 1
+  na = k**2-1
+  r = det_bits_kxk_all.shape[2]//na
+  det_bits_kxk_all_reshaped = det_bits_kxk_all.reshape(n_kernels, n_samples, r, na)
+  det_evts_int = np.abs((det_bits_kxk_all_reshaped[:,:,1:,:] - det_bits_kxk_all_reshaped[:,:,:-1,:])).reshape(n_kernels, n_samples, -1)
+
+  # Find the index of the measure qubit in the dxd surface code through the position map
+  measure_qubits_ord_dxd = get_measure_qubits_ord(d)
+  measure_qubits_ord_dxd_filtered = []
+  for qq in measure_qubits_ord_dxd:
+    if (obs_type=="ZL" and qq[1]=="M:Z") or (obs_type=="XL" and qq[1]=="M:X"):
+      measure_qubits_ord_dxd_filtered.append(qq[2])
+
+  measure_qubits_ord_kxk = get_measure_qubits_ord(k)
+  measure_qubits_ord_kxk_reord = sorted(measure_qubits_ord_kxk)
+
+  filter_kxk_pos_idxs = []
+  for rqq in measure_qubits_ord_kxk:
+    for iqq, qq in enumerate(measure_qubits_ord_kxk_reord):
+      if ((obs_type=="ZL" and qq[1]=="M:Z") or (obs_type=="XL" and qq[1]=="M:X")) and np.array_equal(rqq[2], qq[2]):
+        filter_kxk_pos_idxs.append(iqq)
+  det_bits_kxk_all_first = det_bits_kxk_all_reshaped[:,:,0,filter_kxk_pos_idxs].reshape(n_kernels, n_samples, -1)
+
+  det_bits_kxk_all_last = []
+  for shift_y in range(n_shifts):
+    for shift_x in range(n_shifts):
+      _, measure_ord_kxk_shifted = shift_frame(None, measure_qubits_ord_kxk, k, d, shift_x, shift_y)
+      kernel_pos_map = []
+      for iqq, qqk in enumerate(measure_ord_kxk_shifted):
+        for jqq, qqd in enumerate(measure_qubits_ord_dxd_filtered):
+          if np.array_equal(qqk[2], qqd):
+            kernel_pos_map.append(jqq)
+            break
+      # Filter the kernel_pos_map to only include the ZL or XL observables
+      det_bits_kxk_all_last.append(final_det_evts[:, kernel_pos_map])
+  det_bits_kxk_all_last = np.array(det_bits_kxk_all_last)
+
+  return np.concatenate([det_bits_kxk_all_first, det_evts_int, det_bits_kxk_all_last], axis=2, dtype=det_bits_kxk_all.dtype)
+
+
 def decompose_state_from_bits(det_bits, r):
   """
-  decompose_state_from_bits: Decompose the state of the surface code at each round from the detector bits.
+  decompose_state_from_bits: Decompose the state of the surface code at each round from the detector bits (stabilizer measurements).
   
   This function provides a ternary representation with state=-1 meaning no error, 0 meaning a possible error, and 1 meaning a certain error.
   It collapses detector sequences of the form 010 or 101, so the two representations do not have 1-1 correspondence.

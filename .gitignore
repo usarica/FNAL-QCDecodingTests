@@ -162,6 +162,8 @@ cython_debug/
 # Tensorflow objects
 *.keras
 
-# Plot directory
+# Plots
 plots
 
+# Saved data
+saved_data
