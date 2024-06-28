@@ -280,9 +280,9 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
     dict_group_det_bits_kxk_[opts] = [cached_det_bits_map, cached_data_bits_map, cached_obs_bits_map, cached_translation_idx_map]
 
   return \
-    make_const_array_like(det_bits_kxk_all, det_bits_dxd, dtype=binary_t), \
-    make_const_array_like(data_bits_kxk_all, det_bits_dxd, dtype=binary_t), \
-    make_const_array_like(obs_bits_kxk_all, det_bits_dxd, dtype=binary_t), \
+    arrayops_stack(det_bits_kxk_all, axis=0, dtype=binary_t), \
+    arrayops_stack(data_bits_kxk_all, axis=0, dtype=binary_t), \
+    arrayops_stack(obs_bits_kxk_all, axis=0, dtype=binary_t), \
     kernel_result_translation_map
 
 
@@ -453,5 +453,5 @@ def decompose_state_from_bits(det_bits, r):
     delta_tracker = delta_tracker*(1-state_tracker*state_tracker*(1-measure_err)) - state_tracker*(1-measure_err)
 
     states.append(deepcopy(state_tracker))
-  return make_const_array_like(states, det_bits)
+  return arrayops_stack(states, axis=1)
 

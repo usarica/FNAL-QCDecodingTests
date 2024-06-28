@@ -412,3 +412,17 @@ def arrayops_gather_nd(array, indices, batch_dims=0):
   else:
     return tf.gather_nd(array, tf.cast(indices, tf.int32), batch_dims=batch_dims)
   
+
+def arrayops_stack(arrays, axis, dtype=None):
+  """
+  arrayops_stack: Stack arrays.
+  Arguments:
+  - arrays: Arrays to stack.
+  - axis: Axis along which to stack.
+  - dtype: Data type of the stacked array.
+  """
+  if type(arrays[0]) is np.ndarray:
+    return np.stack(arrays, axis=np.int32(axis), dtype = convert_to_npdtype(dtype))
+  else:
+    return tf.stack(arrays, axis=tf.cast(axis, tf.int32), dtype = convert_to_tfdtype(dtype))
+  
