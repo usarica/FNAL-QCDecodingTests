@@ -208,7 +208,10 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
         else:
           measure_boundary_filter = cached_translation_idx_map[idx_kernel_row]
         for rr in range(r):
-          kernel_result_translation_map[idx_kernel_row, :, rr] = arrayops_sum(det_bits_dxd[:, measure_boundary_filter[rr]], axis=1) % 2
+          kernel_result_translation_map[idx_kernel_row, :, rr] = arrayops_sum(
+              arrayops_gather(det_bits_dxd, measure_boundary_filter[rr], axis=1),
+              axis=1
+            ) % 2
 
       data_qubits_kxk = None
       measure_qubits_kxk = None
@@ -238,7 +241,7 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
       else:
         det_bits_kxk_idx_filter = cached_det_bits_map[shift_x + shift_y*n_shifts]
       # Filter det_bits
-      det_bits_kxk_all.append(det_bits_dxd[:, det_bits_kxk_idx_filter])
+      det_bits_kxk_all.append(arrayops_gather(det_bits_dxd, det_bits_kxk_idx_filter, axis=1))
       
       # Find the index of the data qubit on the dxd surface code through the position map
       if data_bits_dxd is not None:
@@ -262,16 +265,16 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
                 break
             if not found_match:
               raise RuntimeError(f"Data qubit with position ({pos_q_kxk[0], pos_q_kxk[1]}) not found in the dxd surface code.")
+          # Reverse the order of the obs_bits filter to match stim conventions
+          obs_bits_kxk_idx_filter = np.flip(obs_bits_kxk_idx_filter, axis=0)
           cached_data_bits_map.append(data_bits_kxk_idx_filter)
           cached_obs_bits_map.append(obs_bits_kxk_idx_filter)
         else:
           obs_bits_kxk_idx_filter = cached_obs_bits_map[shift_x + shift_y*n_shifts]
           data_bits_kxk_idx_filter = cached_data_bits_map[shift_x + shift_y*n_shifts]
         # Filter data_measurements
-        data_bits_kxk_all.append(data_bits_dxd[:, data_bits_kxk_idx_filter])
-        # Reverse the order of the obs_bits filter to match stim conventions
-        obs_bits_kxk_idx_filter = np.flip(obs_bits_kxk_idx_filter, axis=0)
-        obs_bits_kxk_all.append(data_bits_dxd[:, obs_bits_kxk_idx_filter])
+        data_bits_kxk_all.append(arrayops_gather(data_bits_dxd, data_bits_kxk_idx_filter, axis=1))
+        obs_bits_kxk_all.append(arrayops_gather(data_bits_dxd, obs_bits_kxk_idx_filter, axis=1))
 
   if make_cached_det_bits_map or make_cached_data_bits_map or make_cached_translation_idx_map:
     dict_group_det_bits_kxk_[opts] = [cached_det_bits_map, cached_data_bits_map, cached_obs_bits_map, cached_translation_idx_map]
@@ -307,11 +310,9 @@ def split_measurements(measurements, d, idx_t=np.int32):
   exclude_indices_obsL = np.array([-x-1 for x in range(d*(d-1), d**2)], dtype=idx_t)
   exclude_indices_obsL = exclude_indices_obsL + n_measurements
 
-  det_bits = measurements
-  det_bits = delete_elements(det_bits, exclude_indices, axis=1)
-  obs_bits = measurements[:, exclude_indices_obsL]
-
-  data_bits = measurements[:, exclude_indices]
+  det_bits = delete_elements(measurements, exclude_indices, axis=1)
+  obs_bits = arrayops_gather(measurements, exclude_indices_obsL, axis=1)
+  data_bits = arrayops_gather(measurements, exclude_indices, axis=1)
 
   # Reverse the order of data_bits because exclude_indices starts from the last data qubit measurement, not the first
   # This would conform with the ordering from stim.
@@ -376,7 +377,10 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
     cached_map[0] = filter_kxk_pos_idxs
   else:
     filter_kxk_pos_idxs = cached_map[0]
-  det_bits_kxk_all_first = arrayops_reshape(det_bits_kxk_all_reshaped[:,:,0,filter_kxk_pos_idxs], (n_kernels, n_samples, -1))
+  det_bits_kxk_all_first = arrayops_reshape(
+      arrayops_gather(det_bits_kxk_all_reshaped[:,:,0], filter_kxk_pos_idxs, axis=2),
+      (n_kernels, n_samples, -1)
+    )
 
   det_bits_kxk_all_last = []
   for shift_y in range(n_shifts):
@@ -394,7 +398,7 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
       else:
         kernel_pos_map = cached_map[1][shift_x + shift_y*n_shifts]
       # Filter the kernel_pos_map to only include the ZL or XL observables
-      det_bits_kxk_all_last.append(final_det_evts[:, kernel_pos_map])
+      det_bits_kxk_all_last.append(arrayops_gather(final_det_evts, kernel_pos_map, axis=1))
   det_bits_kxk_all_last = make_const_array_like(det_bits_kxk_all_last, det_bits_kxk_all)
 
   if make_cached_map:
@@ -439,7 +443,13 @@ def decompose_state_from_bits(det_bits, r):
     measure_err = input[:,1,:]*(1 - (input[:,0,:] + input[:,2,:])) + input[:,0,:]*input[:,2,:] # 010/101-like sequences
 
     delta_tracker = delta_tracker*(1-measure_err*2)
-    state_tracker = arrayops_maximum(arrayops_minimum(state_tracker + delta_tracker*data_err, arrayops_ones_like(state_tracker)), -arrayops_ones_like(state_tracker))
+    state_tracker = arrayops_maximum(
+      arrayops_minimum(
+        state_tracker + delta_tracker*data_err,
+        arrayops_ones_like(state_tracker)
+      ),
+      -arrayops_ones_like(state_tracker)
+    )
     delta_tracker = delta_tracker*(1-state_tracker*state_tracker*(1-measure_err)) - state_tracker*(1-measure_err)
 
     states.append(deepcopy(state_tracker))

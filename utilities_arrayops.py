@@ -383,5 +383,32 @@ def arrayops_swapaxes(array, axis1, axis2):
     return np.swapaxes(array, axis1, axis2)
   else:
     return tf.transpose(array, perm=[(i if (i!=axis1 and i!=axis2) else axis2 if i==axis1 else axis1) for i in range(len(array.shape))])
-  
 
+
+def arrayops_gather(array, indices, axis):
+  """
+  arrayops_gather: Gather elements from an array.
+  Arguments:
+  - array: Array from which to gather elements.
+  - indices: Indices of elements to gather.
+  - axis: Axis along which to gather elements.
+  """
+  if type(array) is np.ndarray:
+    return np.take(array, indices, axis=axis)
+  else:
+    return tf.gather(array, indices, axis=axis)
+
+
+def arrayops_gather_nd(array, indices, batch_dims=0):
+  """
+  arrayops_gather_nd: Gather elements from an array using N-dimensional indices.
+  Arguments:
+  - array: Array from which to gather elements.
+  - indices: N-dimensional indices of elements to gather.
+  - batch_dims: Number of batch dimensions, only works with TensorFlow for now.
+  """
+  if type(array) is np.ndarray:
+    return array[tuple(indices)]
+  else:
+    return tf.gather_nd(array, indices, batch_dims=batch_dims)
+  
