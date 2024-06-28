@@ -396,7 +396,7 @@ def arrayops_gather(array, indices, axis):
   if type(array) is np.ndarray:
     return np.take(array, indices, axis=np.int32(axis))
   else:
-    return tf.gather(array, indices, axis=tf.cast(axis, tf.int32))
+    return tf.gather(array, tf.cast(indices, tf.int32), axis=tf.cast(axis, tf.int32))
 
 
 def arrayops_gather_nd(array, indices, batch_dims=0):
@@ -410,5 +410,5 @@ def arrayops_gather_nd(array, indices, batch_dims=0):
   if type(array) is np.ndarray:
     return array[tuple(indices)]
   else:
-    return tf.gather_nd(array, indices, batch_dims=batch_dims)
+    return tf.gather_nd(array, tf.cast(indices, tf.int32), batch_dims=batch_dims)
   
