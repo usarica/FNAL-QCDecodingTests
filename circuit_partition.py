@@ -280,9 +280,9 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
     dict_group_det_bits_kxk_[opts] = [cached_det_bits_map, cached_data_bits_map, cached_obs_bits_map, cached_translation_idx_map]
 
   return \
-    arrayops_stack(det_bits_kxk_all, axis=0, dtype=binary_t), \
-    arrayops_stack(data_bits_kxk_all, axis=0, dtype=binary_t), \
-    arrayops_stack(obs_bits_kxk_all, axis=0, dtype=binary_t), \
+    arrayops_stack(det_bits_kxk_all, axis=0, dtype=binary_t) if len(det_bits_kxk_all)>0 else None, \
+    arrayops_stack(data_bits_kxk_all, axis=0, dtype=binary_t) if len(data_bits_kxk_all)>0 else None, \
+    arrayops_stack(obs_bits_kxk_all, axis=0, dtype=binary_t) if len(obs_bits_kxk_all)>0 else None, \
     kernel_result_translation_map
 
 
