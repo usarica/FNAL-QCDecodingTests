@@ -355,7 +355,7 @@ def arrayops_concatenate(arrays, axis, dtype=None):
   if type(arrays[0]) is np.ndarray:
     return np.concatenate(arrays, axis=np.int32(axis), dtype = convert_to_npdtype(dtype))
   else:
-    return tf.concat(arrays, axis=tf.cast(axis, tf.int32), dtype = convert_to_tfdtype(dtype))
+    return tf.concat(arrays, axis=tf.cast(axis, tf.int32)) if dtype is None else tf.cast(tf.concat(arrays, axis=tf.cast(axis, tf.int32)), dtype = convert_to_tfdtype(dtype))
 
 
 def arrayops_reshape(array, shape):
