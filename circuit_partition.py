@@ -399,7 +399,7 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
         kernel_pos_map = cached_map[1][shift_x + shift_y*n_shifts]
       # Filter the kernel_pos_map to only include the ZL or XL observables
       det_bits_kxk_all_last.append(arrayops_gather(final_det_evts, kernel_pos_map, axis=1))
-  det_bits_kxk_all_last = make_const_array_like(det_bits_kxk_all_last, det_bits_kxk_all)
+  det_bits_kxk_all_last = arrayops_stack(det_bits_kxk_all_last, axis=0)
 
   if make_cached_map:
     dict_det_bits_to_det_evts_[key] = cached_map
