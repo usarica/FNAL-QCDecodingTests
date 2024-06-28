@@ -353,9 +353,9 @@ def arrayops_concatenate(arrays, axis, dtype=None):
   - dtype: Data type of the concatenated array.
   """
   if type(arrays[0]) is np.ndarray:
-    return np.concatenate(arrays, axis=axis, dtype = convert_to_npdtype(dtype))
+    return np.concatenate(arrays, axis=np.int32(axis), dtype = convert_to_npdtype(dtype))
   else:
-    return tf.concat(arrays, axis=axis, dtype = convert_to_tfdtype(dtype))
+    return tf.concat(arrays, axis=tf.int32(axis), dtype = convert_to_tfdtype(dtype))
 
 
 def arrayops_reshape(array, shape):
@@ -394,9 +394,9 @@ def arrayops_gather(array, indices, axis):
   - axis: Axis along which to gather elements.
   """
   if type(array) is np.ndarray:
-    return np.take(array, indices, axis=axis)
+    return np.take(array, indices, axis=np.int32(axis))
   else:
-    return tf.gather(array, indices, axis=axis)
+    return tf.gather(array, indices, axis=tf.int32(axis))
 
 
 def arrayops_gather_nd(array, indices, batch_dims=0):
