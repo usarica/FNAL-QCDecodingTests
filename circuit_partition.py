@@ -414,7 +414,7 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
   if make_cached_map:
     dict_det_bits_to_det_evts_[key] = cached_map
   
-  return arrayops_concatenate([det_bits_kxk_all_first, det_evts_int, det_bits_kxk_all_last], axis=2, dtype=det_bits_kxk_all.dtype)
+  return arrayops_concatenate([det_bits_kxk_all_first, det_evts_int, det_bits_kxk_all_last], axis=2)
 
 
 def decompose_state_from_bits(det_bits, r):
