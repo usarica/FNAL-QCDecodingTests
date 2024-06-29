@@ -279,10 +279,17 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
   if make_cached_det_bits_map or make_cached_data_bits_map or make_cached_translation_idx_map:
     dict_group_det_bits_kxk_[opts] = [cached_det_bits_map, cached_data_bits_map, cached_obs_bits_map, cached_translation_idx_map]
 
+  for i in range(len(det_bits_kxk_all)):
+    det_bits_kxk_all[i] = arrayops_cast(det_bits_kxk_all[i], binary_t)
+  for i in range(len(data_bits_kxk_all)):
+    data_bits_kxk_all[i] = arrayops_cast(data_bits_kxk_all[i], binary_t)
+  for i in range(len(obs_bits_kxk_all)):
+    obs_bits_kxk_all[i] = arrayops_cast(obs_bits_kxk_all[i], binary_t)
+
   return \
-    arrayops_stack(det_bits_kxk_all, axis=0, dtype=binary_t) if len(det_bits_kxk_all)>0 else None, \
-    arrayops_stack(data_bits_kxk_all, axis=0, dtype=binary_t) if len(data_bits_kxk_all)>0 else None, \
-    arrayops_stack(obs_bits_kxk_all, axis=0, dtype=binary_t) if len(obs_bits_kxk_all)>0 else None, \
+    arrayops_stack(det_bits_kxk_all, axis=0) if len(det_bits_kxk_all)>0 else None, \
+    arrayops_stack(data_bits_kxk_all, axis=0) if len(data_bits_kxk_all)>0 else None, \
+    arrayops_stack(obs_bits_kxk_all, axis=0) if len(obs_bits_kxk_all)>0 else None, \
     kernel_result_translation_map
 
 
@@ -377,10 +384,13 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
     cached_map[0] = filter_kxk_pos_idxs
   else:
     filter_kxk_pos_idxs = cached_map[0]
-  det_bits_kxk_all_first = arrayops_reshape(
+  det_bits_kxk_all_first = arrayops_cast(
+    arrayops_reshape(
       arrayops_gather(det_bits_kxk_all_reshaped[:,:,0], filter_kxk_pos_idxs, axis=2),
       (n_kernels, n_samples, -1)
-    )
+    ),
+    det_bits_kxk_all.dtype
+  )
 
   det_bits_kxk_all_last = []
   for shift_y in range(n_shifts):
@@ -399,11 +409,11 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
         kernel_pos_map = cached_map[1][shift_x + shift_y*n_shifts]
       # Filter the kernel_pos_map to only include the ZL or XL observables
       det_bits_kxk_all_last.append(arrayops_gather(final_det_evts, kernel_pos_map, axis=1))
-  det_bits_kxk_all_last = arrayops_stack(det_bits_kxk_all_last, axis=0)
+  det_bits_kxk_all_last = arrayops_cast(arrayops_stack(det_bits_kxk_all_last, axis=0), det_bits_kxk_all.dtype)
 
   if make_cached_map:
     dict_det_bits_to_det_evts_[key] = cached_map
-
+  
   return arrayops_concatenate([det_bits_kxk_all_first, det_evts_int, det_bits_kxk_all_last], axis=2, dtype=det_bits_kxk_all.dtype)
 
 

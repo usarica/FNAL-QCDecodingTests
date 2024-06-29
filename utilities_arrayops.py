@@ -344,20 +344,17 @@ def arrayops_minimum(arr1, arr2):
     return tf.minimum(arr1, arr2)
 
 
-def arrayops_concatenate(arrays, axis, dtype=None):
+def arrayops_concatenate(arrays, axis):
   """
   arrayops_concatenate: Concatenate arrays.
   Arguments:
   - arrays: Arrays to concatenate.
   - axis: Axis along which to concatenate.
-  - dtype: Data type of the concatenated array.
   """
   if type(arrays[0]) is np.ndarray:
-    return np.concatenate(arrays, axis=np.int32(axis), dtype = convert_to_npdtype(dtype))
+    return np.concatenate(arrays, axis=np.int32(axis))
   else:
-    return tf.concat(arrays, axis=tf.cast(axis, tf.int32)) \
-      if dtype is None else \
-      tf.concat([ tf.cast(a, dtype = convert_to_tfdtype(dtype)) for a in arrays ], axis=tf.cast(axis, tf.int32))
+    return tf.concat(arrays, axis=tf.cast(axis, tf.int32))
 
 
 def arrayops_reshape(array, shape):
@@ -415,18 +412,27 @@ def arrayops_gather_nd(array, indices, batch_dims=0):
     return tf.gather_nd(array, tf.cast(indices, tf.int32), batch_dims=batch_dims)
   
 
-def arrayops_stack(arrays, axis, dtype=None):
+def arrayops_stack(arrays, axis):
   """
   arrayops_stack: Stack arrays.
   Arguments:
   - arrays: Arrays to stack.
   - axis: Axis along which to stack.
-  - dtype: Data type of the stacked array.
   """
   if type(arrays[0]) is np.ndarray:
-    return np.stack(arrays, axis=np.int32(axis), dtype = convert_to_npdtype(dtype))
+    return np.stack(arrays, axis=np.int32(axis))
   else:
-    return tf.stack(arrays, axis=tf.cast(axis, tf.int32)) \
-      if dtype is None else \
-      tf.stack([ tf.cast(a, dtype = convert_to_tfdtype(dtype)) for a in arrays ], axis=tf.cast(axis, tf.int32))
-  
+    return tf.stack(arrays, axis=tf.cast(axis, tf.int32))
+
+
+def arrayops_cast(array, dtype):
+  """
+  arrayops_cast: Cast an array to a different data type.
+  Arguments:
+  - array: Input array.
+  - dtype: Data type of the cast.
+  """
+  if type(array) is np.ndarray:
+    return array.astype(convert_to_npdtype(dtype))
+  else:
+    return tf.cast(array, dtype=convert_to_tfdtype(dtype))
