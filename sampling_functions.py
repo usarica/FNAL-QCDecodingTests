@@ -1,11 +1,14 @@
 """
-These are master functions to collect the MC samples using sinter.
+These are master functions to collect the MC samples using sinter and stim.
 """
 
+import numpy as np
 from matplotlib import pyplot as plt
 
 import sinter # MC sampling
 from typing import List # Organizing input to sinter
+
+from circuit_generators import get_circuit_with_inserted_measurements
 
 
 def create_task_sinter(fcn_circuit_generator, args_circuit_generator, **sinter_args):
@@ -156,3 +159,69 @@ def plot_error_rate_sinter(
   ax.grid(which='major')
   #ax.grid(which='minor')
   ax.legend()
+
+
+class CircuitWithProjectiveErrors:
+  """
+  CircuitWithProjectiveErrors: Container class that holds a stim circuit and a modified version with projective errors.
+  Projective errors are defined to be errors on the defined logical observables at each round, projected on the measurement basis.
+  They are distinct from errors on the superposition of states and are probabilistic in nature.
+  Hopefully, one is training a NN to model the statistical behavior of these errors, so there is no need for per-shot correctness.
+  """
+
+  def __init__(self, d, r, reference_circuit, seed=12345):
+    """
+    CircuitWithProjectiveErrors: Initialize the class for specific code distance and number of rounds, and with an unmodified circuit.
+    - Arguments:
+      d: Distance of the code.
+      r: Number of rounds.
+      reference_circuit: The unmodified stim.Circuit object.
+    """
+    self.d = d
+    self.r = r
+    self.reference_circuit = reference_circuit
+    self.modified_circuit, self.obs_idxs = get_circuit_with_inserted_measurements(reference_circuit)
+    self.converter = self.reference_circuit.compile_m2d_converter()
+    self.seed = seed
+    self.r_sampler = self.reference_circuit.compile_sampler(seed=seed)
+    self.m_sampler = self.modified_circuit.compile_sampler(seed=seed)
+
+
+  def sample(self, n_samples, binary_t = np.int8, newseed = None):
+    if newseed is not None and newseed!=self.seed:
+      self.seed = newseed
+      self.m_sampler = self.modified_circuit.compile_sampler(seed=newseed)
+
+    measurements_mod = self.m_sampler.sample(n_samples, bit_packed=False)
+
+    idx_veto = [ i for i in range(2*self.d**2-1) ]
+    for _ in range(self.r):
+      idx_veto.extend([ i+idx_veto[-1]+self.d**2 for i in range(self.d**2) ])
+    idx_filter = [ i for i in range(measurements_mod.shape[1]) if i not in idx_veto ]
+
+    measurements = measurements_mod[:, idx_filter]
+    det_evts, flips = self.converter.convert(measurements=measurements, separate_observables=True, bit_packed=False)
+    det_evts = det_evts.astype(binary_t)
+
+    measurements_mod_data = measurements_mod[:, idx_veto[self.d**2-1:]].reshape((-1, len(idx_veto[self.d**2-1:])//self.d**2, self.d**2)).astype(binary_t)
+    measurements_mod_data = measurements_mod_data[:,:,self.obs_idxs]
+    for ir in range(1, measurements_mod_data.shape[1]):
+      measurements_mod_data[:,ir,:] = np.bitwise_xor(measurements_mod_data[:,ir,:],measurements_mod_data[:,0,:]).astype(binary_t)
+    measurements_mod_data = measurements_mod_data[:,1:,:]
+
+    flips_rest = np.sum(measurements_mod_data, axis=2) % 2
+    flips = np.concatenate((flips_rest, flips), axis=1).astype(binary_t)
+
+    return measurements, det_evts, flips
+  
+
+  def sample_reference(self, n_samples, binary_t = np.int8, newseed = None):
+    if newseed is not None and newseed!=self.seed:
+      self.seed = newseed
+      self.r_sampler = self.reference_circuit.compile_sampler(seed=newseed)
+
+    measurements = self.r_sampler.sample(n_samples, bit_packed=False)
+    det_evts, flips = self.converter.convert(measurements=measurements, separate_observables=True, bit_packed=False)
+    det_evts = det_evts.astype(binary_t)
+    flips = flips.astype(binary_t)
+    return measurements, det_evts, flips
