@@ -1,9 +1,5 @@
 import numpy as np
-# Sigh...
-try:
-  from tensorflow.keras.utils import PyDataset
-except ImportError:
-  from PyDatasetPlaceholder import PyDatasetPlaceholder as PyDataset
+from PyDatasetMgr import PyDatasetMgr
 
 
 class BootstrapSampleManager:
@@ -97,14 +93,14 @@ class BootstrapSampleManager:
       
 
 
-class BootstrapSampler(PyDataset):
+class BootstrapSampler(PyDatasetMgr):
   def __init__(
     self,
     btsmgr,
     use_train,
     **kwargs
   ):
-    super(PyDataset, self).__init__(**kwargs)
+    super(BootstrapSampler, self).__init__(**kwargs)
     self.btsmgr = btsmgr
     self.use_train = use_train
     self.n_batches = self.btsmgr.n_validation_batches if not use_train else self.btsmgr.n_training_batches
