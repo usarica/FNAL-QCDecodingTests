@@ -118,6 +118,8 @@ class BootstrapSampler(PyDataset):
   def __getitem__(self, idx):
     if self.epoch_ctr!=self.btsmgr.epoch:
       self.btsmgr.resample()
+      if self.epoch_ctr!=self.btsmgr.epoch:
+        raise RuntimeError("Failed to synchronize epochs.")
     return self.btsmgr.get_features(idx, self.use_train), self.btsmgr.get_labels(idx, self.use_train)
   
 
