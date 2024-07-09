@@ -76,6 +76,62 @@ def convert_to_npdtype(dtype):
     raise ValueError("Could not recognize the data type.")
 
 
+def arrayops_shape(array, axis = None):
+  """
+  arrayops_shape: Get the shape of an array/tensor.
+  Arguments:
+  - array: Array in which elements are to be flipped.
+  - axis: Axis along which to flip elements.
+  """
+  res = None
+  if type(array) is np.ndarray:
+    res = array.shape
+  else:
+    res = tf.shape(array)
+  if axis is not None:
+    return res[axis]
+  else:
+    return res
+
+
+def arrayops_rank(array):
+  """
+  arrayops_shape: Get the rank of an array/tensor.
+  Arguments:
+  - array: Array in which elements are to be flipped.
+  """
+  res = None
+  if type(array) is np.ndarray:
+    return len(array.shape)
+  else:
+    return tf.rank(array)
+
+
+def arrayops_range(n, dtype, step = 1):
+  """
+  arrayops_range: Get an array of elements in a range
+  Arguments:
+  - n: Span of the range
+  """
+  if type(dtype) is np.dtype:
+    return np.arange(n, step = step, dtype = dtype)
+  else:
+    return tf.range(n, delta = step, dtype = dtype)
+
+
+def arrayops_setdiff1d(a, b):
+  """
+  arrayops_setdiff1d: Get an array of elements that includes all those in one except another.
+  Arguments:
+  - a: Array to include
+  - b: Array to exclude
+  """
+  if type(a) is np.ndarray:
+    return np.setdiff1d(a, b)
+  else:
+    return tf.compat.v1.setdiff1d(a, b)
+
+
 def delete_elements(array, indices, axis):
   """
   delete_elements: Delete elements from an array.
@@ -87,7 +143,7 @@ def delete_elements(array, indices, axis):
   if type(array) is np.ndarray:
     return np.delete(array, indices, axis=axis)
   else:
-    gather_indices = np.setdiff1d(np.arange(array.shape[axis]), indices)
+    gather_indices = arrayops_setdiff1d(arrayops_range(arrayops_shape(array, axis)), indices)
     return tf.gather(array, gather_indices, axis=axis)
 
 
@@ -96,7 +152,6 @@ def flip_elements(array, axis):
   flip_elements: Flip elements in an array.
   Arguments:
   - array: Array in which elements are to be flipped.
-  - indices: Indices of elements to be flipped.
   - axis: Axis along which to flip elements.
   """
   if type(array) is np.ndarray:
@@ -370,18 +425,31 @@ def arrayops_reshape(array, shape):
     return tf.reshape(array, shape)
 
 
-def arrayops_swapaxes(array, axis1, axis2):
+def arrayops_swapaxes(array, axis1 = None, axis2 = None, perm = None):
   """
   arrayops_swapaxes: Swap axes of an array.
   Arguments:
   - array: Array of which to swap axes.
   - axis1: First axis to swap.
   - axis2: Second axis to swap.
+  - perm: Permutation of axes as would be given to tf.transpose.
+  Note in the arguments that either axis1 and axis2, or perm can be None, never both.
   """
+  if axis1 is None and axis2 is None and perm is None:
+    raise ValueError("axis1, axis2, and perm cannot be all None.")
+  if (axis1 is not None and axis2 is None) or (axis2 is not None and axis1 is None):
+    raise ValueError("axis1 and axis2 should both be set if set at all.")
   if type(array) is np.ndarray:
+    if axis1 is None and axis2 is None:
+      raise ValueError("numpy implementation of swapaxes needs axis1 and axis2.")
     return np.swapaxes(array, axis1, axis2)
   else:
-    return tf.transpose(array, perm=[(i if (i!=axis1 and i!=axis2) else axis2 if i==axis1 else axis1) for i in range(len(array.shape))])
+    p = None
+    if perm is not None:
+      p = perm
+    else:
+      p = [(i if (i!=axis1 and i!=axis2) else axis2 if i==axis1 else axis1) for i in range(arrayops_rank(array))]
+    return tf.transpose(array, perm=p)
 
 
 def arrayops_gather(array, indices, axis):

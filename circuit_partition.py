@@ -151,7 +151,7 @@ def group_det_bits_kxk(det_bits_dxd, d, r, k, use_rotated_z, data_bits_dxd=None,
   kernel_result_translation_map = None
   if make_translation_map:
     kernel_result_translation_map = arrayops_zeros(
-      (n_shifts, det_bits_dxd.shape[0], r),
+      (n_shifts, arrayops_shape(det_bits_dxd, 0), r),
       dtype = convert_to_npdtype(binary_t) if type(data_bits_dxd)==np.ndarray else convert_to_tfdtype(binary_t)
     )
   
@@ -308,7 +308,7 @@ def split_measurements(measurements, d, idx_t=np.int32):
   - Observable bits: 2D array of shape=[number of samples, d]
   - Data bits: 2D array of shape=[number of samples, d^2]
   """
-  n_measurements = idx_t(measurements.shape[1])
+  n_measurements = idx_t(arrayops_shape(measurements, 1))
   # Measurements on data qubits come last
   exclude_indices = np.array([-x-1 for x in range(d**2)], dtype=idx_t)
   exclude_indices = exclude_indices + n_measurements
@@ -331,7 +331,7 @@ def split_measurements(measurements, d, idx_t=np.int32):
 # Global dictionary to avoid reassembling the det_bits -> det_evts map.
 dict_det_bits_to_det_evts_ = {}
 
-def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts):
+def translate_det_bits_to_det_evts(d, r, k, obs_type, det_bits_kxk_all, final_det_evts):
   """
   translate_det_bits_to_det_evts: Translate the detector bits to detector events.
   Arguments:
@@ -342,12 +342,10 @@ def translate_det_bits_to_det_evts(obs_type, k, det_bits_kxk_all, final_det_evts
   Returns:
   - Detector events for the kxk kernel subsets of the surface code
   """
-  n_samples = det_bits_kxk_all.shape[1]
-  n_kernels = det_bits_kxk_all.shape[0]
-  n_shifts = int(np.sqrt(n_kernels))
-  d = n_shifts + k - 1
+  n_samples = arrayops_shape(det_bits_kxk_all, 1)
+  n_shifts = d-k+1
+  n_kernels = n_shifts**2
   na = k**2-1
-  r = det_bits_kxk_all.shape[2]//na
 
   key = (obs_type, d, r, k)
   cached_map = dict_det_bits_to_det_evts_.get(key, None)
@@ -440,10 +438,10 @@ def decompose_state_from_bits(det_bits, r):
   - 3D array of shape=[number of samples, r-2, d^2-1] for the state of the surface code at each round.
   """
   dt = det_bits.dtype
-  det_bits_r = arrayops_reshape(det_bits, (det_bits.shape[0], r, -1))
-  ns = det_bits_r.shape[0]
+  det_bits_r = arrayops_reshape(det_bits, (arrayops_shape(det_bits, 0), r, -1))
+  ns = arrayops_shape(det_bits_r, 0)
   nt = r
-  ndet = det_bits_r.shape[2]
+  ndet = arrayops_shape(det_bits_r, 2)
   state_tracker = -arrayops_ones(shape=(ns, ndet), dtype=dt)
   delta_tracker = arrayops_ones(shape=(ns, ndet), dtype=dt)
   states = []

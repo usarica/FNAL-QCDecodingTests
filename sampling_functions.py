@@ -212,6 +212,8 @@ class CircuitWithProjectiveErrors:
     flips_rest = np.sum(measurements_mod_data, axis=2) % 2
     flips = np.concatenate((flips_rest, flips), axis=1).astype(binary_t)
 
+    measurements = measurements.astype(binary_t)
+
     return measurements, det_evts, flips
   
 
@@ -222,6 +224,8 @@ class CircuitWithProjectiveErrors:
 
     measurements = self.r_sampler.sample(n_samples, bit_packed=False)
     det_evts, flips = self.converter.convert(measurements=measurements, separate_observables=True, bit_packed=False)
+    
+    measurements = measurements.astype(binary_t)
     det_evts = det_evts.astype(binary_t)
     flips = flips.astype(binary_t)
     return measurements, det_evts, flips
