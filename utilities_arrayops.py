@@ -504,3 +504,46 @@ def arrayops_cast(array, dtype):
     return array.astype(convert_to_npdtype(dtype))
   else:
     return tf.cast(array, dtype=convert_to_tfdtype(dtype))
+
+
+
+class VariableBounds:
+  bound_zlike = 8
+
+
+  @staticmethod
+  def set_bound_zlike(bound):
+    if bound<0:
+      bound = -bound
+    VariableBounds.bound_zlike = bound
+  
+
+  @staticmethod
+  def get_bound_zlike(dtype):
+    return tf.cast(VariableBounds.bound_zlike, dtype)
+  
+
+  @staticmethod
+  def clip_zlike(zlike):
+    zb = VariableBounds.get_bound_zlike(zlike.dtype)
+    return tf.clip_by_value(zlike, -zb, zb)
+
+
+  @staticmethod
+  def clip_frac(frac):
+    zb = VariableBounds.get_bound_zlike(frac.dtype)
+    ez = tf.math.exp(zb)
+    fz = ez/(ez+1)
+    return tf.clip_by_value(frac, -fz+1, fz)
+
+
+  @staticmethod
+  def clip_exp(expv):
+    zb = VariableBounds.get_bound_zlike(expv.dtype)
+    ez = tf.math.exp(zb)
+    return tf.clip_by_value(expv, 1/ez, ez)
+  
+
+  @staticmethod
+  def clip_prob(prob):
+    return VariableBounds.clip_frac(prob)
