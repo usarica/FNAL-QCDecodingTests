@@ -508,7 +508,7 @@ def arrayops_cast(array, dtype):
 
 
 class VariableBounds:
-  bound_zlike = 8
+  bound_zlike = 12
 
 
   @staticmethod
