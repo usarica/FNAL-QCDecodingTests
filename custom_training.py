@@ -10,7 +10,9 @@ class RCNNRecurrenceLoss(Loss):
     self,
     rounds,
     has_final_state,
+    separate_first_round = False,
     scale_init=1.,
+    scale_init_doublet=1.,
     scale_leadin=1.,
     scale_recurrent=1.,
     scale_final=1.,
@@ -19,14 +21,19 @@ class RCNNRecurrenceLoss(Loss):
     super().__init__(**kwargs)
     self.rounds = rounds
     self.has_final_state = has_final_state
+    self.separate_first_round = separate_first_round
 
     self.initial_round = 0
-    self.leadin_round = self.initial_round+1 if self.rounds>2 else None
+    self.initial_doublet_round = self.initial_round+1 if self.separate_first_round else None
+    self.leadin_round = None
+    if self.rounds>2:
+      self.leadin_round = self.initial_doublet_round+1 if self.separate_first_round else self.initial_round+1
     self.final_round = -1 if has_final_state else None
     self.has_recurrent_rounds = self.rounds>3
     self.recurrent_round_bound = self.final_round
 
     self.scale_init = scale_init
+    self.scale_init_doublet = scale_init_doublet
     self.scale_leadin = scale_leadin
     self.scale_recurrent = scale_recurrent
     self.scale_final = scale_final
@@ -34,6 +41,9 @@ class RCNNRecurrenceLoss(Loss):
 
   def call(self, y_true, y_pred):
     init = tf.keras.losses.binary_crossentropy(y_true[:,self.initial_round], y_pred[:,self.initial_round])*self.scale_init
+    init_doublet = None
+    if self.separate_first_round:
+      init_doublet = tf.keras.losses.binary_crossentropy(y_true[:,self.initial_doublet_round], y_pred[:,self.initial_doublet_round])*self.scale_init_doublet
     leadin = tf.keras.losses.binary_crossentropy(y_true[:,self.leadin_round], y_pred[:,self.leadin_round])*self.scale_leadin if self.leadin_round is not None else None
     recurrent = None
     if self.has_recurrent_rounds:
@@ -45,6 +55,8 @@ class RCNNRecurrenceLoss(Loss):
     final = tf.keras.losses.binary_crossentropy(y_true[:,self.final_round], y_pred[:,self.final_round])*self.scale_final if self.final_round is not None else None
 
     res = tf.math.reduce_mean(init)
+    if init_doublet is not None:
+      res += tf.math.reduce_mean(init_doublet)
     if leadin is not None:
       res += tf.math.reduce_mean(leadin)
     if recurrent is not None:
@@ -60,7 +72,9 @@ class RCNNRecurrenceLoss(Loss):
       {
         'rounds': self.rounds,
         'has_final_state': self.has_final_state,
+        'separate_first_round': self.separate_first_round,
         'scale_init': self.scale_init,
+        'scale_init_doublet': self.scale_init_doublet,
         'scale_leadin': self.scale_leadin,
         'scale_recurrent': self.scale_recurrent,
         'scale_final': self.scale_final,
@@ -75,14 +89,19 @@ class RCNNRecurrenceAccuracy(Metric):
     self,
     rounds,
     has_final_state,
+    separate_first_round = False,
     **kwargs
   ):
     super().__init__(**kwargs)
     self.rounds = rounds
     self.has_final_state = has_final_state
+    self.separate_first_round = separate_first_round
 
     self.initial_round = 0
-    self.leadin_round = self.initial_round+1 if self.rounds>2 else None
+    self.initial_doublet_round = self.initial_round+1 if self.separate_first_round else None
+    self.leadin_round = None
+    if self.rounds>2:
+      self.leadin_round = self.initial_doublet_round+1 if self.separate_first_round else self.initial_round+1
     self.final_round = -1 if has_final_state else None
     self.has_recurrent_rounds = self.rounds>3
     self.recurrent_round_bound = self.final_round
@@ -90,6 +109,7 @@ class RCNNRecurrenceAccuracy(Metric):
     self.counter = self.add_weight(name='counter', initializer='zeros')
 
     self.init_accuracy = self.add_weight(name='init_accuracy', initializer='zeros')
+    self.init_doublet_accuracy = self.add_weight(name='init_doublet_accuracy', initializer='zeros') if self.initial_doublet_round is not None else None
     self.leadin_accuracy = self.add_weight(name='leadin_accuracy', initializer='zeros') if self.leadin_round is not None else None
     self.recurrent_accuracy = self.add_weight(name='recurrent_accuracy', initializer='zeros') if self.has_recurrent_rounds else None
     self.final_accuracy = self.add_weight(name='final_accuracy', initializer='zeros') if self.final_round is not None else None
@@ -101,6 +121,7 @@ class RCNNRecurrenceAccuracy(Metric):
       {
         'rounds': self.rounds,
         'has_final_state': self.has_final_state,
+        'separate_first_round': self.separate_first_round
       }
     )
     return config
@@ -127,6 +148,9 @@ class RCNNRecurrenceAccuracy(Metric):
 
     init = RCNNRecurrenceAccuracy.binary_accuracy(y_true[:,self.initial_round], y_pred[:,self.initial_round])
     self.init_accuracy.assign_add(init*n)
+    if self.initial_doublet_round is not None:
+      init_doublet = RCNNRecurrenceAccuracy.binary_accuracy(y_true[:,self.initial_doublet_round], y_pred[:,self.initial_doublet_round])
+      self.init_doublet_accuracy.assign_add(init_doublet*n)
     if self.leadin_round is not None:
       leadin = RCNNRecurrenceAccuracy.binary_accuracy(y_true[:,self.leadin_round], y_pred[:,self.leadin_round])
       self.leadin_accuracy.assign_add(leadin*n)
@@ -145,6 +169,8 @@ class RCNNRecurrenceAccuracy(Metric):
   
   def result(self):
     res = [ self.init_accuracy ]
+    if self.initial_doublet_round is not None:
+      res.append(self.init_doublet_accuracy)
     if self.leadin_round is not None:
       res.append(self.leadin_accuracy)
     if self.has_recurrent_rounds:
@@ -158,6 +184,8 @@ class RCNNRecurrenceAccuracy(Metric):
   def reset_state(self):
     self.counter.assign(0.)
     self.init_accuracy.assign(0.)
+    if self.initial_doublet_round is not None:
+      self.init_doublet_accuracy.assign(0.)
     if self.leadin_round is not None:
       self.leadin_accuracy.assign(0.)
     if self.has_recurrent_rounds:

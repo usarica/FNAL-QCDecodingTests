@@ -12,6 +12,8 @@ from qkeras import QDense, QActivation
 from keras.models import Model
 from sklearn.model_selection import train_test_split
 import numpy as np
+import uproot as uprt
+import awkward as ak
 
 
 def build_sequential_dense_model(
@@ -133,3 +135,14 @@ def split_data(*arrays, test_size=0.2, seed=12345, shuffle=False):
   return train_test_split(*arrays, test_size=test_size, random_state=seed, shuffle=shuffle)
 
 
+def save_history(history, path):
+  history_raw_data = deepcopy(history.history)
+  for key, val in history_raw_data.items():
+    if isinstance(val, np.ndarray):
+      history_raw_data[key] = val.astype(np.float32)
+    else:
+      history_raw_data[key] = np.float32(val)
+      
+  history_data = ak.Array(history_raw_data)
+  with uprt.recreate(f"{path}") as fout:
+    fout["history"] = history_data
