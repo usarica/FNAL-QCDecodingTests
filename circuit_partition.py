@@ -1,10 +1,12 @@
 import numpy as np
 from copy import deepcopy
 from utilities_arrayops import *
+from types_cfg import get_types
 
 
 def coord_to_idx(coords, d):
-  return np.int8(coords[0] + (coords[1] - coords[0]%2)*(d+0.5))
+  _, _, idx_t, _ = get_types(d, 1, 1)
+  return idx_t(coords[0] + (coords[1] - coords[0]%2)*(d+0.5))
 
 
 def get_measure_qubits_ord(d):
@@ -34,6 +36,21 @@ def get_data_qubits_ord(d):
       if is_XL:
         lbl = lbl + ":XL"
       res.append([coord_to_idx(coords, d), lbl, coords])
+  return res
+
+
+def get_data_qubits_next_to_measure_qubits(d):
+  data_qubits = sorted(get_data_qubits_ord(d))
+  measure_qubits = sorted(get_measure_qubits_ord(d))
+  res = []
+  for mq in measure_qubits:
+    coord_mq = mq[2]
+    idxs_dq = []
+    for idx_dq, dq in enumerate(data_qubits):
+      coord_dq = dq[2]
+      if abs(coord_dq[0]-coord_mq[0])*abs(coord_dq[1]-coord_mq[1]) == 1:
+        idxs_dq.append(idx_dq)
+    res.append(idxs_dq)
   return res
 
 
