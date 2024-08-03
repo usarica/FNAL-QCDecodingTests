@@ -8,7 +8,7 @@ def convert_to_tfdtype(dtype):
   Arguments:
   - dtype: Data type to convert.
   """
-  if dtype is None or type(dtype) is tf.DType:
+  if dtype is None or isinstance(dtype, tf.DType):
     return dtype
 
   if dtype == np.int8:
@@ -45,7 +45,7 @@ def convert_to_npdtype(dtype):
   Arguments:
   - dtype: Data type to convert.
   """
-  if dtype is None or type(dtype) is np.dtype:
+  if dtype is None or isinstance(dtype, np.dtype):
     return dtype
 
   if dtype == tf.int8:
@@ -84,7 +84,7 @@ def arrayops_shape(array, axis = None):
   - axis: Axis along which to flip elements.
   """
   res = None
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     res = array.shape
   else:
     res = tf.shape(array)
@@ -101,7 +101,7 @@ def arrayops_rank(array):
   - array: Array in which elements are to be flipped.
   """
   res = None
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return len(array.shape)
   else:
     return tf.rank(array)
@@ -113,7 +113,7 @@ def arrayops_range(n, dtype, step = 1):
   Arguments:
   - n: Span of the range
   """
-  if type(dtype) is np.dtype:
+  if isinstance(dtype, np.dtype):
     return np.arange(n, step = step, dtype = dtype)
   else:
     return tf.range(n, delta = step, dtype = dtype)
@@ -126,7 +126,7 @@ def arrayops_setdiff1d(a, b):
   - a: Array to include
   - b: Array to exclude
   """
-  if type(a) is np.ndarray:
+  if isinstance(a, np.ndarray):
     return np.setdiff1d(a, b)
   else:
     return tf.compat.v1.setdiff1d(a, b)
@@ -140,7 +140,7 @@ def delete_elements(array, indices, axis):
   - indices: Indices of elements to be deleted.
   - axis: Axis along which to delete elements.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.delete(array, indices, axis=axis)
   else:
     gather_indices = arrayops_setdiff1d(arrayops_range(arrayops_shape(array, axis)), indices)
@@ -154,7 +154,7 @@ def flip_elements(array, axis):
   - array: Array in which elements are to be flipped.
   - axis: Axis along which to flip elements.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.flip(array, axis=axis)
   else:
     return tf.reverse(array, axis=[axis])
@@ -169,7 +169,7 @@ def make_const_array_like(array, like_array, assume_same_dtype=False, dtype=None
   - assume_same_dtype: Assume the same data type as the like array.
   - dtype: Data type of the array if not assuming the same data type.
   """
-  if type(like_array) is np.ndarray:
+  if isinstance(like_array, np.ndarray):
     return np.array(array, dtype=like_array.dtype if assume_same_dtype else convert_to_npdtype(dtype))
   else:
     return tf.constant(array, dtype=like_array.dtype if assume_same_dtype else convert_to_tfdtype(dtype))
@@ -182,9 +182,9 @@ def arrayops_zeros(shape, dtype):
   - shape: Shape of the array.
   - dtype: Data type of the array.
   """
-  if type(dtype) is np.dtype:
+  if isinstance(dtype, np.dtype):
     return np.zeros(shape, dtype=dtype)
-  elif type(dtype) is tf.DType:
+  elif isinstance(dtype, tf.DType):
     return tf.zeros(shape, dtype=dtype)
   else:
     raise ValueError("Could not recognize the tensor type from the data type.")
@@ -197,9 +197,9 @@ def arrayops_ones(shape, dtype):
   - shape: Shape of the array.
   - dtype: Data type of the array.
   """
-  if type(dtype) is np.dtype:
+  if isinstance(dtype, np.dtype):
     return np.ones(shape, dtype=dtype)
-  elif type(dtype) is tf.DType:
+  elif isinstance(dtype, tf.DType):
     return tf.ones(shape, dtype=dtype)
   else:
     raise ValueError("Could not recognize the tensor type from the data type.")
@@ -211,7 +211,7 @@ def arrayops_zeros_like(array):
   Arguments:
   - array: Array to be made like.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.zeros_like(array)
   else:
     return tf.zeros_like(array)
@@ -223,7 +223,7 @@ def arrayops_ones_like(array):
   Arguments:
   - array: Array to be made like.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.ones_like(array)
   else:
     return tf.ones_like(array)
@@ -235,7 +235,7 @@ def arrayops_abs(array):
   Arguments:
   - array: Array of which to take the absolute value.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.abs(array)
   else:
     return tf.math.abs(array)
@@ -247,7 +247,7 @@ def arrayops_sign(array):
   Arguments:
   - array: Array of which to take the sign.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.sign(array)
   else:
     return tf.math.sign(array)
@@ -262,7 +262,7 @@ def arrayops_sum(array, axis=None, keepdims=False):
   - axis: Axis along which to take the sum.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.sum(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_sum(array, axis=axis, keepdims=keepdims)
@@ -277,7 +277,7 @@ def arrayops_mean(array, axis=None, keepdims=False):
   - axis: Axis along which to take the mean.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.mean(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_mean(array, axis=axis, keepdims=keepdims)
@@ -292,7 +292,7 @@ def arrayops_prod(array, axis=None, keepdims=False):
   - axis: Axis along which to take the product.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.prod(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_prod(array, axis=axis, keepdims=keepdims)
@@ -307,7 +307,7 @@ def arrayops_max(array, axis=None, keepdims=False):
   - axis: Axis along which to take the maximum value.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.max(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_max(array, axis=axis, keepdims=keepdims)
@@ -322,7 +322,7 @@ def arrayops_min(array, axis=None, keepdims=False):
   - axis: Axis along which to take the minimum value.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.min(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_min(array, axis=axis, keepdims=keepdims)
@@ -337,7 +337,7 @@ def arrayops_logsumexp(array, axis=None, keepdims=False):
   - axis: Axis along which to take the logarithm of the sum of exponentials.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.log(np.sum(np.exp(array), axis=axis, keepdims=keepdims))
   else:
     return tf.reduce_logsumexp(array, axis=axis, keepdims=keepdims)
@@ -352,7 +352,7 @@ def arrayops_any(array, axis=None, keepdims=False):
   - axis: Axis along which to take the logical OR.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.any(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_any(array, axis=axis, keepdims=keepdims)
@@ -367,7 +367,7 @@ def arrayops_all(array, axis=None, keepdims=False):
   - axis: Axis along which to take the logical AND.
   - keepdims: Whether to keep the dimensions of the array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.all(array, axis=axis, keepdims=keepdims)
   else:
     return tf.reduce_all(array, axis=axis, keepdims=keepdims)
@@ -380,7 +380,7 @@ def arrayops_maximum(arr1, arr2):
   - arr1: First array.
   - arr2: Second array.
   """
-  if type(arr1) is np.ndarray:
+  if isinstance(arr1, np.ndarray):
     return np.maximum(arr1, arr2)
   else:
     return tf.maximum(arr1, arr2)
@@ -393,7 +393,7 @@ def arrayops_minimum(arr1, arr2):
   - arr1: First array.
   - arr2: Second array.
   """
-  if type(arr1) is np.ndarray:
+  if isinstance(arr1, np.ndarray):
     return np.minimum(arr1, arr2)
   else:
     return tf.minimum(arr1, arr2)
@@ -406,7 +406,7 @@ def arrayops_concatenate(arrays, axis):
   - arrays: Arrays to concatenate.
   - axis: Axis along which to concatenate.
   """
-  if type(arrays[0]) is np.ndarray:
+  if isinstance(arrays[0], np.ndarray):
     return np.concatenate(arrays, axis=np.int32(axis))
   else:
     return tf.concat(arrays, axis=int(axis))
@@ -419,7 +419,7 @@ def arrayops_reshape(array, shape):
   - array: Array to reshape.
   - shape: Shape of the reshaped array.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.reshape(array, shape)
   else:
     return tf.reshape(array, shape)
@@ -439,7 +439,7 @@ def arrayops_swapaxes(array, axis1 = None, axis2 = None, perm = None):
     raise ValueError("axis1, axis2, and perm cannot be all None.")
   if (axis1 is not None and axis2 is None) or (axis2 is not None and axis1 is None):
     raise ValueError("axis1 and axis2 should both be set if set at all.")
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     if axis1 is None and axis2 is None:
       raise ValueError("numpy implementation of swapaxes needs axis1 and axis2.")
     return np.swapaxes(array, axis1, axis2)
@@ -460,7 +460,7 @@ def arrayops_gather(array, indices, axis):
   - indices: Indices of elements to gather.
   - axis: Axis along which to gather elements.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return np.take(array, indices, axis=np.int32(axis))
   else:
     return tf.gather(array, tf.cast(indices, tf.int32), axis=int(axis))
@@ -474,7 +474,7 @@ def arrayops_gather_nd(array, indices, batch_dims=0):
   - indices: N-dimensional indices of elements to gather.
   - batch_dims: Number of batch dimensions, only works with TensorFlow for now.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return array[tuple(indices)]
   else:
     return tf.gather_nd(array, tf.cast(indices, tf.int32), batch_dims=batch_dims)
@@ -487,7 +487,7 @@ def arrayops_stack(arrays, axis):
   - arrays: Arrays to stack.
   - axis: Axis along which to stack.
   """
-  if type(arrays[0]) is np.ndarray:
+  if isinstance(arrays[0], np.ndarray):
     return np.stack(arrays, axis=np.int32(axis))
   else:
     return tf.stack(arrays, axis=int(axis))
@@ -500,7 +500,7 @@ def arrayops_cast(array, dtype):
   - array: Input array.
   - dtype: Data type of the cast.
   """
-  if type(array) is np.ndarray:
+  if isinstance(array, np.ndarray):
     return array.astype(convert_to_npdtype(dtype))
   else:
     return tf.cast(array, dtype=convert_to_tfdtype(dtype))

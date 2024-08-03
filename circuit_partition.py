@@ -479,4 +479,3 @@ def decompose_state_from_bits(det_bits, r):
 
     states.append(deepcopy(state_tracker))
   return arrayops_stack(states, axis=1)
-
