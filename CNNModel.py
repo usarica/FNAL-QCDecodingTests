@@ -1575,7 +1575,7 @@ class CNNStateCorrelatorWeightInitializer(Initializer):
 
   def __call__(self, shape, dtype=None):
     # Check first if the shape is compatible with the expected shape
-    if shape != self.shape_exp:
+    if list(shape) != self.shape_exp:
       raise ValueError(f"Expected shape {self.shape_exp}, but received shape {shape}")
     # Initialize weights for state reversion for old states
     res = np.zeros(shape, dtype=convert_to_npdtype(dtype))
@@ -1637,7 +1637,7 @@ class CNNStateCorrelatorBiasInitializer(Initializer):
 
   def __call__(self, shape, dtype=None):
     # Check first if the shape is compatible with the expected shape
-    if shape != self.shape_exp:
+    if list(shape) != self.shape_exp:
       raise ValueError(f"Expected shape {self.shape_exp}, but received shape {shape}")
     # Initialize weights for state reversion for old states
     res = np.zeros(shape, dtype=convert_to_npdtype(dtype))
@@ -3510,6 +3510,7 @@ class FullRCNNModel(Model):
       separate_first_round = False,
       allow_combiner_inversion = False,
       decode_per_state_layer = False,
+      is_grouped = False,
       probability_accumulation_mode = FullRCNNModelEnums.prob_no_acc,
       **kwargs
     ):
@@ -3587,6 +3588,7 @@ class FullRCNNModel(Model):
     self.allow_combiner_inversion = allow_combiner_inversion
     self.probability_accumulation_mode = probability_accumulation_mode
     self.decode_per_state_layer = decode_per_state_layer and (self.return_all_rounds or self.probability_accumulation_mode==FullRCNNModelEnums.prob_decoded_acc)
+    self.is_grouped = is_grouped
 
     self.first_round_offset = (0 if self.separate_first_round else 1)
 
@@ -3722,7 +3724,8 @@ class FullRCNNModel(Model):
         "separate_first_round": self.separate_first_round,
         "allow_combiner_inversion": self.allow_combiner_inversion,
         "decode_per_state_layer": self.decode_per_state_layer,
-        "probability_accumulation_mode": self.probability_accumulation_mode
+        "probability_accumulation_mode": self.probability_accumulation_mode,
+        "is_grouped": self.is_grouped,
       }
     )
     return config
@@ -3793,7 +3796,7 @@ class FullRCNNModel(Model):
     Group the stabilizer measurements and detector events into kernels if this is not done already.
     See the call() function for further details on the conventions of the function argument all_inputs.
     """
-    if arrayops_rank(all_inputs[0])==3:
+    if self.is_grouped:
       # In this case, the inputs are already grouped by kernel strides.
       # Faster in training, but less memory-efficient.
       return all_inputs[0], all_inputs[1]
