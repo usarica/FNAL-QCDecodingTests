@@ -7,8 +7,23 @@ from circuit_partition import *
 from types_cfg import *
 from utilities_arrayops import *
 
+# Import lazy evaluation utilities
+try:
+    from utilities_tf import lazy_evaluation, LazyEvaluationCache
+    _cnn_cache = LazyEvaluationCache(max_size=64)
+except ImportError:
+    # Fallback if utilities_tf is not available
+    def lazy_evaluation(func):
+        return func
+    _cnn_cache = None
 
+
+@lazy_evaluation()
 def get_layer_input_maps(n_ancillas, npol, is_symmetric):
+  """
+  Get layer input maps with lazy evaluation caching.
+  This function is computationally expensive for large values of n_ancillas.
+  """
   diag_param_map = None
   nondiag_param_map = None
   triangular_polmap = None
@@ -91,7 +106,11 @@ def get_layer_input_maps(n_ancillas, npol, is_symmetric):
   return diag_param_map, nondiag_param_map, triangular_polmap, triangular_backpolmap
 
 
+@lazy_evaluation()
 def get_layer_output_map(d, is_symmetric):
+  """
+  Get layer output map with lazy evaluation caching.
+  """
   if not is_symmetric:
     return [ ii for ii in range(d**2) ]
   else:
@@ -110,9 +129,11 @@ def get_layer_output_map(d, is_symmetric):
     return res
 
 
+@lazy_evaluation()
 def get_detector_bits_perround_map(d, r, npol, is_symmetric, ignore_diagonal=False):
   """
   get_detector_bits_perround_map: Get the mapping of the detector bits to the output qubits.
+  Enhanced with lazy evaluation caching for expensive computations.
   If we have a linear map
   Detector bits (i) [i<Ndb] -> W_ij -> Data qubit (j) [j<Ndq]
   with npol=1,
@@ -174,9 +195,11 @@ def get_detector_bits_perround_map(d, r, npol, is_symmetric, ignore_diagonal=Fal
   return res
 
 
+@lazy_evaluation()
 def get_states_perround_map(d, r, npol, is_symmetric):
   """
   get_states_perround_map: Get the mapping of the states to the output qubits.
+  Enhanced with lazy evaluation caching for expensive computations.
   If we have a linear map
   States (i) [i<Ndq] -> W_ij -> Data qubit (j) [j<Ndq]
   with npol=1,
@@ -574,6 +597,7 @@ def get_detector_bit_state_relation_map(d, r, npol, is_symmetric):
 class DetectorBitStateEmbedder(Layer):
   """
   DetectorBitStateEmbedder: Convert binary detector bit data into a linear (npol=1) or quadratic (npol>1) form.
+  Enhanced with lazy evaluation for expensive tensor operations.
   If npol=1, the returned vector is just the original input.
   If npol>1, there are only two possible values for the state of diagonal terms: 0x0 -> -1, and 1x1-> 1. They are returned as is.
   For non-diagonal terms, there are 3 possible values: 0x0 -> -1x-1, 0x1/1x0 -> -1x1/1x-1, and 1x1 -> 1x1.
@@ -586,6 +610,7 @@ class DetectorBitStateEmbedder(Layer):
       is_symmetric,
       npol,
       ignore_diagonal,
+      use_lazy_evaluation=True,
       **kwargs
     ):
     super(DetectorBitStateEmbedder, self).__init__(**kwargs)
@@ -594,6 +619,7 @@ class DetectorBitStateEmbedder(Layer):
     self.is_symmetric = is_symmetric
     self.npol = npol
     self.ignore_diagonal = ignore_diagonal
+    self.use_lazy_evaluation = use_lazy_evaluation
     self.ndims = (self.distance**2 - 1)*self.rounds
 
     self.embedder_label = f"DetectorBitStateEmbedder_npol{self.npol}"
@@ -644,7 +670,8 @@ class DetectorBitStateEmbedder(Layer):
         "rounds": self.rounds,
         "is_symmetric": self.is_symmetric,
         "npol": self.npol,
-        "ignore_diagonal": self.ignore_diagonal
+        "ignore_diagonal": self.ignore_diagonal,
+        "use_lazy_evaluation": self.use_lazy_evaluation
       }
     )
     return config
@@ -3949,3 +3976,33 @@ class FullRCNNModel(Model):
     else:
       res = self.decode_state(psi_list[-1], -1)
     return res
+
+
+# Lazy evaluation utility functions for CNNModel components
+def clear_cnn_cache():
+    """Clear the CNN computation cache to free memory."""
+    if _cnn_cache is not None:
+        _cnn_cache.clear()
+        print("CNN cache cleared.")
+
+
+def get_cnn_cache_info():
+    """Get information about the CNN cache usage."""
+    if _cnn_cache is not None:
+        return {
+            "cache_size": len(_cnn_cache.cache),
+            "max_size": _cnn_cache.max_size,
+            "cached_keys": list(_cnn_cache.cache.keys())
+        }
+    return {"cache_size": 0, "max_size": 0, "cached_keys": []}
+
+
+def enable_cnn_lazy_evaluation():
+    """Enable lazy evaluation for CNN components."""
+    global _cnn_cache
+    if _cnn_cache is None:
+        from utilities_tf import LazyEvaluationCache
+        _cnn_cache = LazyEvaluationCache(max_size=64)
+        print("CNN lazy evaluation enabled.")
+    else:
+        print("CNN lazy evaluation already enabled.")
